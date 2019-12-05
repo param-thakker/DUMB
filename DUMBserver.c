@@ -1,10 +1,11 @@
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<sys/socket.h>
-#include<arpa/inet.h>
-#include<unistd.h>
-#include<pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <time.h>
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
@@ -43,7 +44,16 @@ int main(int argc, char **argv) {
 	
 	char buffer[1024];
 	read(clientSocket, buffer, 1024);
-	printf("%s\n", buffer);
+	
+	struct sockaddr_in clientIP;
+	socklen_t clientSize = sizeof(clientIP);
+	getpeername(clientSocket, (struct sockaddr *) &clientIP, &clientSize);
+	
+	time_t t = time(NULL);
+	printf("%s %s\n", asctime(localtime(&t)), inet_ntoa(clientIP.sin_addr));
+	
+	char *msg = "HELLO DUMBv0 ready!";
+	write(clientSocket, msg, strlen(msg) + 1);
 	
 	return 0;
 }
