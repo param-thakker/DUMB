@@ -7,6 +7,15 @@
 #include <pthread.h>
 #include <time.h>
 
+typedef struct _message {
+    char *msg;
+    struct _message *next;
+}message;
+typedef struct _box {
+    char *name;
+    struct _box *next;
+    message *messages;
+}box;
 void logMessage(int client, char* msg) {
 	time_t t = time(NULL);
 	struct sockaddr_in address;
@@ -18,15 +27,8 @@ void logMessage(int client, char* msg) {
 }
 
 void substr(char* str, char* sub , int start, int len);
-typedef struct _message {
-    char *msg;
-    struct _message *next;
-}message;
-typedef struct _box {
-    char *name;
-    struct _box *next;
-    message *messages;
-}box;
+box * createLinkedList(box *first,box *data);
+
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
@@ -67,7 +69,7 @@ int main(int argc, char **argv) {
 
 	char *buffer = (char *) malloc(sizeof(char)*1024);
 	char *clientMessage = (char *) malloc(sizeof(char)*100);
-
+	box  *first=NULL;
 	read(clientSocket, buffer, 1024);
 
 	while (strcmp(buffer, "GDBYE") != 0){
@@ -76,15 +78,37 @@ int main(int argc, char **argv) {
 		char *msg;
 		if (strcmp(buffer, "HELLO") == 0){
 			msg= "HELLO DUMBv0 ready!";
-		} else if (strcmp(buffer, "GDBYE") == 0){
-			msg="";
-		} else {
+		}
+
+		else {
 			substr(buffer, clientMessage, 0, 5);
 			
 			if (strcmp(clientMessage, "CREAT") == 0){
+				int error=0;
 				box* messageBox=(box*)malloc(sizeof(box));
 				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
 				messageBox->name = clientMessage;
+				box *pointer=NULL;
+				for (pointer=first;pointer=pointer->next;pointer!=NULL){
+
+				 	if (strcmp(pointer->name, clientMessage)==0){
+					 	logMessage(clientSocket, "ER:EXIST");
+					 	error=1;
+					
+				         	break;
+				 	}
+				}	
+		
+				if (error==1){
+			          read(clientSocket, buffer, 1024);
+			          continue;
+					
+				}
+				else{
+			        first=createLinkedList(first, messageBox);
+				}
+				
+				
 				msg = "OK!";
 			}
 		}
@@ -103,4 +127,32 @@ int main(int argc, char **argv) {
 void substr(char* str, char* sub , int start, int len){
     memcpy(sub, &str[start], len);
     sub[len] = '\0';
+}
+box * createLinkedList(box *first,box *data){
+   
+    box *temp= NULL;
+    box *pointer=NULL;
+
+        temp=(box*)malloc(sizeof(box));
+	temp->name=data->name;
+	temp->messages=NULL;
+        temp->next=NULL;
+        
+        if (first==NULL){
+            
+            first=temp;
+        }
+        else{
+            
+	      pointer=first;
+	      first=temp;
+	      first->next=pointer;
+	    }
+
+	  
+        
+    
+	
+    return first;
+
 }
