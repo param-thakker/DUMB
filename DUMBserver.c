@@ -56,8 +56,8 @@ int main(int argc, char **argv) {
 	}
 
 	
-	char buffer[1024];
-	char *clientMessage;
+	char *buffer=(char *)malloc(sizeof(char)*1024);
+	char *clientMessage=(char *)malloc(sizeof(char)*100);
 
 	read(clientSocket, buffer, 1024);
 
@@ -73,20 +73,22 @@ int main(int argc, char **argv) {
 	if (strcmp(buffer, "HELLO") == 0){
 	 msg= "HELLO DUMBv0 ready!";
 	}
-	else if (strcmp(buffer, "GDBYE") == 0){
+	if (strcmp(buffer, "GDBYE") == 0){
 	msg="";
 	}
-	
-	if (strcmp(substr(buffer, clientMessage, 0, 4), "CREAT")==0){
-		struct box messageBox=(struct box*)malloc(sizeof(struct box));
-		messageBox.name=substr(buffer, clientMessage;
+	substr(buffer, clientMessage, 0, 4);
+	if (strcmp(clientMessage, "CREAT")==0){
+		box* messageBox=(box*)malloc(sizeof(box));
+		substr(buffer, clientMessage, 6 , strlen(buffer)-1);
+		messageBox->name=clientMessage;
+		printf("Created box of name %s\n", clientMessage);
 		msg="OK!";
 		
 		
 	}
-	else if (strcmp(buffer, strcat("CREAT ", name) == 0){
+	/*else if (strcmp(buffer, strcat("CREAT ", name) == 0){
 		
-	}
+	}*/
 	write(clientSocket, msg, strlen(msg) + 1);
 	read(clientSocket, buffer, 1024);
 	}
