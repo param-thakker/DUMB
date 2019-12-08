@@ -50,9 +50,44 @@ int main(int argc, char **argv) {
 	
 	if(strcmp(sendMessage(socketFD, "HELLO"), "HELLO DUMBv0 ready!") == 0) {
 		printf("Connected successfully.\n");
-	} else {
-		printf("There was a server-side error. Closing the connection\n");
 	}
+	printf("You can now start entering the commands\n");
+	char command[20];
+	scanf("%s",command);
+	
+	
+	while (strcmp(command,"quit")!=0){
+	
+	if (strcmp(command, "help")==0){
+		printf("These are the possible commands:\n\n");
+		printf("quit\ncreate\ndelete\nopen\nclose\nnext\nput\n\n");								
+	}
+	else if (strcmp(command, "create")==0){
+		printf("okay, give the name of the message box you want to create\n");
+		char *name;
+		printf("create:>");
+		scanf("%s",name);
+		char *createMessage=strcat("CREAT ", name);
+		if (strcmp(sendMessage(socketFD, createMessage), "OK!") == 0){
+		printf("Message Box Created Successfully\n");
+		}
+		else{
+			printf("ERROR in creating Message Box\n");
+		}				
+	}
+	
+
+	/*else {
+		printf("There was a server-side error. Closing the connection\n");
+	}*/
+	
+	scanf("%s",command);
+	}
+	if (strcmp(sendMessage(socketFD, "GDBYE"), "") == 0){
+		printf("Disconnected successfully.\n");
+	}
+	
+
 	
 	return 0;
 }
