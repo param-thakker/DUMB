@@ -10,12 +10,15 @@
 typedef struct _message {
     char *msg;
     struct _message *next;
-}message;
+} message;
+
 typedef struct _box {
     char *name;
+    char *user;
     struct _box *next;
     message *messages;
-}box;
+} box;
+
 void logMessage(int client, char* msg) {
 	time_t t = time(NULL);
 	struct sockaddr_in address;
@@ -27,8 +30,8 @@ void logMessage(int client, char* msg) {
 }
 
 void substr(char* str, char* sub , int start, int len);
-box * createLinkedList(box *first,box *data);
-
+void addMsgBox(box **first, box *data);
+void removeMsgBox(box **first, box *data);
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
@@ -69,7 +72,7 @@ int main(int argc, char **argv) {
 
 	char *buffer = (char *) malloc(sizeof(char)*1024);
 	char *clientMessage = (char *) malloc(sizeof(char)*100);
-	box  *first=NULL;
+	box *first = NULL;
 	read(clientSocket, buffer, 1024);
 
 	while (strcmp(buffer, "GDBYE") != 0){
@@ -78,9 +81,7 @@ int main(int argc, char **argv) {
 		char *msg;
 		if (strcmp(buffer, "HELLO") == 0){
 			msg= "HELLO DUMBv0 ready!";
-		}
-
-		else {
+		} else {
 			substr(buffer, clientMessage, 0, 5);
 			
 			if (strcmp(clientMessage, "CREAT") == 0){
@@ -88,28 +89,73 @@ int main(int argc, char **argv) {
 				box* messageBox=(box*)malloc(sizeof(box));
 				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
 				messageBox->name = clientMessage;
-				box *pointer=NULL;
-				for (pointer=first;pointer=pointer->next;pointer!=NULL){
-
-				 	if (strcmp(pointer->name, clientMessage)==0){
-					 	logMessage(clientSocket, "ER:EXIST");
+				
+				box *pointer = NULL;
+				for (pointer = first; pointer != NULL; pointer = pointer->next){
+				 	if (strcmp(pointer->name, clientMessage) == 0) {
+				 		msg = "ER:EXIST";
+					 	logMessage(clientSocket, msg);
 					 	error=1;
-					
-				         	break;
+						break;
 				 	}
 				}	
 		
-				if (error==1){
-			          read(clientSocket, buffer, 1024);
-			          continue;
-					
-				}
-				else{
-			        first=createLinkedList(first, messageBox);
+				if (error == 0) {
+			        addMsgBox(&first, messageBox);
+       				msg = "OK!";
 				}
 				
+				free(messageBox);
+			} else if (strcmp(clientMessage, "DELBX") == 0) {
+				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
 				
 				msg = "OK!";
+				
+				int found = 0;
+				box *pointer = NULL;
+				for (pointer = first; pointer != NULL; pointer = pointer->next) {
+					if(pointer == first) {
+						if(strcmp(pointer->name, clientMessage) == 0) {
+							found = 1;
+							
+							if(pointer->user == NULL) {
+								first = pointer->next;
+								free(pointer);
+							} else {
+								msg = "ER:OPEND";
+								logMessage(clientSocket, msg);
+							}
+														
+							break;
+						}
+					}
+					
+					if (pointer->next != NULL && strcmp(pointer->next->name, clientMessage) == 0) {
+				 		found = 1;
+						
+						if(pointer->next->user == NULL) {				 	
+						 	free(pointer->next);
+						 	pointer->next = pointer->next->next;
+						} else {
+							msg = "ER:OPEND";
+							logMessage(clientSocket, msg);
+						}
+				 		
+				 		break;
+				 	}
+				}
+				
+				if(!found) {
+					msg = "ER:NEXST";
+					logMessage(clientSocket, msg);
+				}
+			} else if(strcmp(clientMessage, "OPNBX") == 0) {
+			} else if(strcmp(clientMessage, "CLSBX") == 0) {			
+			} else if(strcmp(clientMessage, "NXTMG") == 0) {
+			} else if(strcmp(clientMessage, "PUTMG") == 0) {
+			} else {
+				msg = "ER:WHAT?";
+				logMessage(clientSocket, msg);
 			}
 		}
 		
@@ -128,31 +174,19 @@ void substr(char* str, char* sub , int start, int len){
     memcpy(sub, &str[start], len);
     sub[len] = '\0';
 }
-box * createLinkedList(box *first,box *data){
-   
-    box *temp= NULL;
-    box *pointer=NULL;
 
-        temp=(box*)malloc(sizeof(box));
-	temp->name=data->name;
-	temp->messages=NULL;
-        temp->next=NULL;
-        
-        if (first==NULL){
-            
-            first=temp;
-        }
-        else{
-            
-	      pointer=first;
-	      first=temp;
-	      first->next=pointer;
-	    }
-
-	  
-        
-    
+void addMsgBox(box **first, box *data) {
+	box *temp = (box *) malloc(sizeof(box));
 	
-    return first;
+	temp->name = (char *) malloc(strlen(data->name) + 1);
+	strcpy(temp->name, data->name);
 
+	temp->user = NULL;
+	
+	temp->next = *first;
+	*first = temp;
+}
+
+void removeMsgBox(box **first, box *data) {
+	
 }
