@@ -62,60 +62,44 @@ int main(int argc, char **argv) {
 		perror("Accept failed");
 		return 1;
 	}
+	
+	logMessage(clientSocket, "connected");
 
-	char *buffer=(char *)malloc(sizeof(char)*1024);
-	char *clientMessage=(char *)malloc(sizeof(char)*100);
+	char *buffer = (char *) malloc(sizeof(char)*1024);
+	char *clientMessage = (char *) malloc(sizeof(char)*100);
 
 	read(clientSocket, buffer, 1024);
 
-	while (strcmp(buffer, "quit") != 0){
+	while (strcmp(buffer, "GDBYE") != 0){
+		logMessage(clientSocket, buffer);
+		
+		char *msg;
+		if (strcmp(buffer, "HELLO") == 0){
+			msg= "HELLO DUMBv0 ready!";
+		} else if (strcmp(buffer, "GDBYE") == 0){
+			msg="";
+		} else {
+			substr(buffer, clientMessage, 0, 5);
+			
+			if (strcmp(clientMessage, "CREAT") == 0){
+				box* messageBox=(box*)malloc(sizeof(box));
+				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+				messageBox->name = clientMessage;
+				msg = "OK!";
+			}
+		}
+		
+		write(clientSocket, msg, strlen(msg) + 1);
+		read(clientSocket, buffer, 1024);
+	}
 	
 	logMessage(clientSocket, buffer);
-	struct sockaddr_in clientIP;
-	socklen_t clientSize = sizeof(clientIP);
-	getpeername(clientSocket, (struct sockaddr *) &clientIP, &clientSize);
-	
-	time_t t = time(NULL);
-	printf("%s %s\n", asctime(localtime(&t)), inet_ntoa(clientIP.sin_addr));
-	char *msg;
-	if (strcmp(buffer, "HELLO") == 0){
-	 msg= "HELLO DUMBv0 ready!";
-	}
-	if (strcmp(buffer, "GDBYE") == 0){
-	msg="";
-	}
-	substr(buffer, clientMessage, 0, 4);
-	if (strcmp(clientMessage, "CREAT")==0){
-		box* messageBox=(box*)malloc(sizeof(box));
-		substr(buffer, clientMessage, 6 , strlen(buffer)-1);
-		messageBox->name=clientMessage;
-		printf("Created box of name %s\n", clientMessage);
-		msg="OK!";
-		
-		
-	}
-	/*else if (strcmp(buffer, strcat("CREAT ", name) == 0){
-		
-	}*/
-	write(clientSocket, msg, strlen(msg) + 1);
-	read(clientSocket, buffer, 1024);
-	}
-	
-	while(1) {
-		char buffer[1024];
-		read(clientSocket, buffer, 1024);
-		
-		if(strcmp(buffer, "GDBYE") == 0) {
-			logMessage(clientSocket, buffer);
-			close(clientSocket);
-			logMessage(clientSocket, "disconnected");
-			
-			break;
-		}
-	}
+	close(clientSocket);
+	logMessage(clientSocket, "disconnected");
 	
 	return 0;
 }
+
 void substr(char* str, char* sub , int start, int len){
     memcpy(sub, &str[start], len);
     sub[len] = '\0';

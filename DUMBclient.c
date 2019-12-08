@@ -64,11 +64,15 @@ int main(int argc, char **argv) {
 			printf("quit\ncreate\ndelete\nopen\nclose\nnext\nput\n\n");								
 		} else if(strcmp(command, "create") == 0) {
 			printf("okay, give the name of the message box you want to create\n");
-			char *name;
+			
+			char *name = (char *) malloc(sizeof(char) * 25);
 			printf("create:> ");
 			scanf("%s", name);
-			char *createMessage = strcat("CREAT ", name);
 			
+			char *createMessage = (char *) malloc(sizeof(char) * 31);
+			strcpy(createMessage, "CREAT ");
+			strcat(createMessage, name);
+
 			if(strlen(name) >= 5 && strlen(name) <= 25) {
 				if(tolower(name[0]) >= 'a' && tolower(name[0]) <= 'z') {
 					char *response = sendMessage(socketFD, createMessage);
