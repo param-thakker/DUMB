@@ -54,5 +54,20 @@ int main(int argc, char **argv) {
 		printf("There was a server-side error. Closing the connection\n");
 	}
 	
+	char input[1024];
+	while(1) {
+		printf("> ");
+		scanf("%s", &input);
+		
+		if(strcmp(input, "quit") == 0) {
+			if(strlen(sendMessage(socketFD, "GDBYE")) == 0) {
+				printf("Disconnected successfully.\n");
+				break;
+			} else {
+				printf("There was an error disconnecting.\n");
+			}
+		}
+	}
+	
 	return 0;
 }

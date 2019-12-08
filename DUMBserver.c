@@ -7,6 +7,16 @@
 #include <pthread.h>
 #include <time.h>
 
+void logMessage(int client, char* msg) {
+	time_t t = time(NULL);
+	struct sockaddr_in address;
+	socklen_t size = sizeof(struct sockaddr_in);
+	
+	getpeername(client, (struct sockaddr *) &address, &size);
+	
+	printf("%s %s %s\n", strtok(ctime(&t), "\n"), inet_ntoa(address.sin_addr), msg);
+}
+
 int main(int argc, char **argv) {
 	if(argc != 2) {
 		printf("ERROR: Invalid number of arguments.\nUsage: ./DUMBserve [port]\n");
@@ -42,18 +52,28 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	
+	logMessage(clientSocket, "connected");
+	
 	char buffer[1024];
 	read(clientSocket, buffer, 1024);
 	
-	struct sockaddr_in clientIP;
-	socklen_t clientSize = sizeof(clientIP);
-	getpeername(clientSocket, (struct sockaddr *) &clientIP, &clientSize);
-	
-	time_t t = time(NULL);
-	printf("%s %s\n", asctime(localtime(&t)), inet_ntoa(clientIP.sin_addr));
+	logMessage(clientSocket, buffer);
 	
 	char *msg = "HELLO DUMBv0 ready!";
 	write(clientSocket, msg, strlen(msg) + 1);
+	
+	while(1) {
+		char buffer[1024];
+		read(clientSocket, buffer, 1024);
+		
+		if(strcmp(buffer, "GDBYE") == 0) {
+			logMessage(clientSocket, buffer);
+			close(clientSocket);
+			logMessage(clientSocket, "disconnected");
+			
+			break;
+		}
+	}
 	
 	return 0;
 }
