@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
 	char *buffer = (char *) malloc(sizeof(char)*1024);
 	char *clientMessage = (char *) malloc(sizeof(char)*100);
 	box *first = NULL;
+	message *msgFirst=NULL;
 	read(clientSocket, buffer, 1024);
 
 	while (strcmp(buffer, "GDBYE") != 0){
@@ -82,6 +83,7 @@ int main(int argc, char **argv) {
 				box* messageBox = (box *) malloc(sizeof(box));
 				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
 				messageBox->name = clientMessage;
+				messageBox->messages=msgFirst;
 				
 				box *pointer = NULL;
 				for (pointer = first; pointer != NULL; pointer = pointer->next){
@@ -258,4 +260,15 @@ void addMsgBox(box **first, box *data) {
 
 void removeMsgBox(box **first, box *data) {
 	
+}
+
+void addMessage(message **msgFirst, message * Message){
+	message *temp = (message *) malloc(sizeof(message));
+	
+	temp->msg = (char *) malloc(strlen(Message->msg) + 1);
+	strcpy(temp->msg, Message->msg);
+	
+	temp->next = *msgFirst;
+	*msgFirst = temp;
+
 }
