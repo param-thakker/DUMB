@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 			
 			if (strcmp(clientMessage, "CREAT") == 0){
 				int error=0;
-				box* messageBox=(box*)malloc(sizeof(box));
+				box* messageBox = (box *) malloc(sizeof(box));
 				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
 				messageBox->name = clientMessage;
 				
@@ -189,12 +189,15 @@ int main(int argc, char **argv) {
 				box *pointer = NULL;
 				for (pointer = first; pointer != NULL; pointer = pointer->next) {
 					if(strcmp(pointer->name, clientMessage) == 0) {
- 						 found = 1;
-						 if(pointer->user == 1) {
-							 pointer->user = 0;
-						 } else {
-						 	msg = "ER:NOOPN";
-						 }
+ 						found = 1;
+ 						 
+						if(pointer->open && pointer->user == 1) {
+							pointer->open = 0;
+							pointer->user = 0;
+						} else {
+							msg = "ER:NOOPN";
+							logMessage(clientSocket, msg);							
+						}
 					}
 				}
 				

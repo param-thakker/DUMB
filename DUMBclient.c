@@ -149,22 +149,24 @@ int main(int argc, char **argv) {
 				printf("ERROR: malformed command\n");
 			}
 		} else if(strcmp(command, "close") == 0) {
-			if(boxName == "") {
-				printf("ERROR: you do not currently have a message box open\n");
-			} else {
-				char *closeMessage = (char *) malloc(sizeof(char) * 31);
-				strcpy(closeMessage, "CLSBX ");
-				strcat(closeMessage, boxName);
-				
-				char *response = sendMessage(servSock, closeMessage);
-				if(strcmp(response, "OK!") == 0) {
-					boxName = "";
-					printf("Message box closed successfully\n");
-				} else if(strcmp(response, "ER:NOOPN") == 0) {
-					printf("ERROR: message box '%s' not currently open\n", boxName);
-				} else if(strcmp(response, "ER:WHAT?") == 0) {
-					printf("ERROR: malformed command\n");
-				}
+			printf("type the name of the message box to confirm that you want to close it:\n");
+			
+			char *name = (char *) malloc(sizeof(char) * 25);
+			printf("close:> ");
+			scanf("%s", name);
+			
+			char *closeMessage = (char *) malloc(sizeof(char) * 31);
+			strcpy(closeMessage, "CLSBX ");
+			strcat(closeMessage, name);
+			
+			char *response = sendMessage(servSock, closeMessage);
+			if(strcmp(response, "OK!") == 0) {
+				boxName = "";
+				printf("Message box closed successfully\n");
+			} else if(strcmp(response, "ER:NOOPN") == 0) {
+				printf("ERROR: message box not currently open or does not exist\n", boxName);
+			} else if(strcmp(response, "ER:WHAT?") == 0) {
+				printf("ERROR: malformed command\n");
 			}
 		} else if(strcmp(command, "next") == 0) {
 			char *response = sendMessage(servSock, "NXTMG");
