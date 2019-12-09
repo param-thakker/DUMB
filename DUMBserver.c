@@ -22,7 +22,7 @@ typedef struct _box {
 
 char *getIpAddress(int client);
 void logMessage(int client, char* msg);
-void substr(char* str, char* sub , int start, int len);
+void substr(char *str, char *sub, int start, int end);
 void addMsgBox(box **first, box *data);
 void removeMsgBox(box **first, box *data);
 
@@ -63,8 +63,8 @@ int main(int argc, char **argv) {
 	
 	logMessage(clientSocket, "connected");
 
-	char *buffer = (char *) malloc(sizeof(char)*1024);
-	char *clientMessage = (char *) malloc(sizeof(char)*100);
+	char *buffer = (char *) malloc(1<<16);
+	char *clientMessage = (char *) malloc(1<<16);
 	box *first = NULL;
 	read(clientSocket, buffer, 1024);
 
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 			if (strcmp(clientMessage, "CREAT") == 0){
 				int error=0;
 				box* messageBox = (box *) malloc(sizeof(box));
-				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+				substr(buffer, clientMessage, 6, strlen(buffer));
 				messageBox->name = clientMessage;
 				
 				box *pointer = NULL;
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 				
 				free(messageBox);
 			} else if (strcmp(clientMessage, "DELBX") == 0) {
-				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+				substr(buffer, clientMessage, 6, strlen(buffer));
 				
 				msg = "OK!";
 				
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
 					logMessage(clientSocket, msg);
 				}
 			} else if(strcmp(clientMessage, "OPNBX") == 0) {
-				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+				substr(buffer, clientMessage, 6, strlen(buffer));
 			
 				msg = "OK!";
 			
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
 					logMessage(clientSocket, msg);
 				}
 			} else if(strcmp(clientMessage, "CLSBX") == 0) {
-				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+				substr(buffer, clientMessage, 6, strlen(buffer));
 			
 				msg = "OK!";
 			
@@ -207,6 +207,16 @@ int main(int argc, char **argv) {
 				}			
 			} else if(strcmp(clientMessage, "NXTMG") == 0) {
 			} else if(strcmp(clientMessage, "PUTMG") == 0) {
+				char *args = (char *) malloc(1<<16);
+				char *sub = (char *) malloc(7);
+				substr(buffer, args, 6, strlen(buffer));
+				int delimiter = strchr(args, '!') - args;
+				substr(args, sub, 0, delimiter);
+				int len = atoi(sub);
+				sub = (char *) malloc(len + 1);
+				substr(args, sub, delimiter + 1, strlen(args));
+				
+				printf("message is %d chars and is %s\n", len, sub);
 			} else {
 				msg = "ER:WHAT?";
 				logMessage(clientSocket, msg);
@@ -238,9 +248,9 @@ void logMessage(int client, char* msg) {
 	printf("%s %s %s\n", strtok(ctime(&t), "\n"), getIpAddress(client), msg);
 }
 
-void substr(char* str, char* sub , int start, int len){
-    memcpy(sub, &str[start], len);
-    sub[len] = '\0';
+void substr(char *str, char *sub, int start, int end) {
+    memcpy(sub, &str[start], end - start);
+    sub[end - start] = '\0';
 }
 
 void addMsgBox(box **first, box *data) {
@@ -254,8 +264,4 @@ void addMsgBox(box **first, box *data) {
 	
 	temp->next = *first;
 	*first = temp;
-}
-
-void removeMsgBox(box **first, box *data) {
-	
 }

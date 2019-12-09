@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
 			printf("put:> ");
 			scanf("%s", msg);
 			
-			char *putMessage = (char *) malloc(1<<16 + 11);
+			char *putMessage = (char *) malloc(1<<16);
 			char *len = (char *) malloc(6);
 			snprintf(len, 5, "%d", strlen(msg));
 			
