@@ -25,6 +25,8 @@ void logMessage(int client, char* msg);
 void substr(char *str, char *sub, int start, int end);
 void addMsgBox(box **first, box *data);
 void removeMsgBox(box **first, box *data);
+void addMessage(box *b, message *Message);
+char *getMessage(box *b);
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
@@ -71,9 +73,9 @@ int main(int argc, char **argv) {
 	while (strcmp(buffer, "GDBYE") != 0){
 		logMessage(clientSocket, buffer);
 		
-		char *msg;
+		char *msg = (char *) malloc(32);
 		if (strcmp(buffer, "HELLO") == 0){
-			msg= "HELLO DUMBv0 ready!";
+			msg = "HELLO DUMBv0 ready!";
 		} else {
 			substr(buffer, clientMessage, 0, 5);
 			
@@ -82,6 +84,7 @@ int main(int argc, char **argv) {
 				box* messageBox = (box *) malloc(sizeof(box));
 				substr(buffer, clientMessage, 6, strlen(buffer));
 				messageBox->name = clientMessage;
+				messageBox->messages = NULL;
 				
 				box *pointer = NULL;
 				for (pointer = first; pointer != NULL; pointer = pointer->next){
@@ -206,17 +209,52 @@ int main(int argc, char **argv) {
 					logMessage(clientSocket, msg);
 				}			
 			} else if(strcmp(clientMessage, "NXTMG") == 0) {
+				box *b = NULL;
+				for(b = first; b != NULL; b = b->next) {
+					if(b->open && b->user == 1) {
+						break;
+					}
+				}
+				
+				if(b == NULL) {
+					msg = "ER:NOOPN";
+					logMessage(clientSocket, msg);
+				} else {				
+					char *m = getMessage(b);
+					
+					if(m == NULL) {
+						msg = "ER:EMPTY";
+						logMessage(clientSocket, msg);
+					} else {
+						sprintf(msg, "OK!%d!%s", strlen(m), m);
+					}
+				}
 			} else if(strcmp(clientMessage, "PUTMG") == 0) {
 				char *args = (char *) malloc(1<<16);
-				char *sub = (char *) malloc(7);
-				substr(buffer, args, 6, strlen(buffer));
-				int delimiter = strchr(args, '!') - args;
-				substr(args, sub, 0, delimiter);
-				int len = atoi(sub);
-				sub = (char *) malloc(len + 1);
-				substr(args, sub, delimiter + 1, strlen(args));
 				
-				printf("message is %d chars and is %s\n", len, sub);
+				int len;
+				char *m = (char *) malloc(1<<16);
+				
+				sscanf(buffer, "PUTMG!%d!%[^\n]s", &len, m);
+				
+				message *Message = (message *) malloc(sizeof(message));
+				Message->msg = m;
+				
+				box *b = NULL;
+				for(b = first; b != NULL; b = b->next) {
+					if(b->open && b->user == 1) {
+						break;
+					}
+				}
+				
+				sprintf(msg, "OK!%d", len);
+				
+				if(b == NULL) {
+					msg = "ER:NOOPN";
+					logMessage(clientSocket, msg);
+				} else {			
+					addMessage(b, Message);
+				}
 			} else {
 				msg = "ER:WHAT?";
 				logMessage(clientSocket, msg);
@@ -227,9 +265,17 @@ int main(int argc, char **argv) {
 		read(clientSocket, buffer, 1024);
 	}
 	
+	box *b;
+	for(b = first; b != NULL; b = b->next) {
+		if(b->open && b->user == 1) {
+			b->open = 0;
+			b->user = 0;
+		}
+	}
+	
 	logMessage(clientSocket, buffer);
-	close(clientSocket);
 	logMessage(clientSocket, "disconnected");
+	close(clientSocket);
 	
 	return 0;
 }
@@ -264,4 +310,31 @@ void addMsgBox(box **first, box *data) {
 	
 	temp->next = *first;
 	*first = temp;
+}
+
+void addMessage(box *b, message *Message) {
+	message *temp = (message *) malloc(sizeof(message));
+
+	temp->msg = (char *) malloc(strlen(Message->msg) + 1);
+	strcpy(temp->msg, Message->msg);
+
+	temp->next = NULL;
+	
+	if(b->messages == NULL) {
+		b->messages = temp;
+	} else {
+		message *ptr;
+		for(ptr = b->messages; ptr->next != NULL; ptr = ptr->next);
+		ptr->next = temp;
+	}
+}
+
+char *getMessage(box *b) {
+	if(b->messages == NULL) {
+		return NULL;
+	} else {
+		message *msg = b->messages;
+		b->messages = b->messages->next;
+		return msg->msg;
+	}	
 }

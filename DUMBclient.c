@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 void substr(char *str, char *sub, int start, int end);
+char *getInput(int size);
 
 char *sendMessage(int server, char *msg) {
 	write(server, msg, strlen(msg) + 1);
@@ -57,9 +58,9 @@ int main(int argc, char **argv) {
 	}
 	
 	printf("You can now start entering the commands\n");
-	char command[1024];
+	char *command = (char *) malloc(1<<16);
 	printf("> ");
-	scanf("%s", command);
+	command = getInput(1<<16);
 	
 	char *boxName = "";
 	
@@ -79,7 +80,7 @@ int main(int argc, char **argv) {
 			
 			char *name = (char *) malloc(sizeof(char) * 25);
 			printf("create:> ");
-			scanf("%s", name);
+			name = getInput(25);
 			
 			char *createMessage = (char *) malloc(sizeof(char) * 31);
 			strcpy(createMessage, "CREAT ");
@@ -106,7 +107,7 @@ int main(int argc, char **argv) {
 			
 			char *name = (char *) malloc(sizeof(char) * 25);
 			printf("delete:> ");
-			scanf("%s", name);
+			name = getInput(25);
 			
 			char *deleteMessage = (char *) malloc(sizeof(char) * 31);
 			strcpy(deleteMessage, "DELBX ");
@@ -129,7 +130,7 @@ int main(int argc, char **argv) {
 			
 			char *name = (char *) malloc(sizeof(char) * 25);
 			printf("open:> ");
-			scanf("%s", name);
+			name = getInput(25);
 			
 			char *openMessage = (char *) malloc(sizeof(char) * 31);
 			strcpy(openMessage, "OPNBX ");
@@ -153,7 +154,7 @@ int main(int argc, char **argv) {
 			
 			char *name = (char *) malloc(sizeof(char) * 25);
 			printf("close:> ");
-			scanf("%s", name);
+			name = getInput(25);
 			
 			char *closeMessage = (char *) malloc(sizeof(char) * 31);
 			strcpy(closeMessage, "CLSBX ");
@@ -174,13 +175,11 @@ int main(int argc, char **argv) {
 			substr(response, sub, 0, 3);
 			
 			if(strcmp(sub, "OK!") == 0) {
-				int delimiter = strchr(response, '!') - response;
-				substr(response, sub, 3, delimiter);
-				int len = atoi(sub);
-				sub = (char *) malloc(len + 1);
-				substr(response, sub, delimiter + 1, strlen(response));
+				int len;
+				char buffer[1<<16];
 				
-				printf("%s\n", sub);
+				sscanf(response, "OK!%d!%[^\n]s", &len, buffer);
+				printf("%s\n", buffer);
 			} else if(strcmp(response, "ER:EMPTY") == 0) {
 				printf("ERROR: message box is empty\n");
 			} else if(strcmp(response, "ER:NOOPN") == 0) {
@@ -193,16 +192,10 @@ int main(int argc, char **argv) {
 			
 			char *msg = (char *) malloc(1<<16);
 			printf("put:> ");
-			scanf("%s", msg);
+			msg = getInput(1<<16);
 			
 			char *putMessage = (char *) malloc(1<<16);
-			char *len = (char *) malloc(6);
-			snprintf(len, 5, "%d", strlen(msg));
-			
-			strcpy(putMessage, "PUTMG!");
-			strcat(putMessage, len);
-			strcat(putMessage, "!");
-			strcat(putMessage, msg);
+			sprintf(putMessage, "PUTMG!%d!%s", strlen(msg), msg);
 			
 			char *response = sendMessage(servSock, putMessage);
 			char *sub = (char *) malloc(4);
@@ -220,7 +213,7 @@ int main(int argc, char **argv) {
 		}
 		
 		printf("> ");
-		scanf("%s", command);
+		command = getInput(1<<16);
 	}
 	
 	return 0;
@@ -229,4 +222,15 @@ int main(int argc, char **argv) {
 void substr(char *str, char *sub, int start, int end) {
     memcpy(sub, &str[start], end - start);
     sub[end - start] = '\0';
+}
+
+char *getInput(int size) {
+	char *buffer = (char *) malloc(size);
+	scanf("%[^\n]", buffer);
+	buffer = strtok(buffer, "\n");
+	
+	char c;
+	while((c = getchar()) != '\n' && c != EOF);
+	
+	return buffer;
 }
