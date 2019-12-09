@@ -143,6 +143,8 @@ int main(int argc, char **argv) {
 				printf("ERROR: message box does not exist\n");
 			} else if(strcmp(response, "ER:OPEND") == 0) {
 				printf("ERROR: message box is currently in use\n");
+			} else if(strcmp(response, "ER:ONLY1") == 0) {
+				printf("ERROR: you may only have one box open at a time\n");
 			} else if(strcmp(response, "ER:WHAT?") == 0) {
 				printf("ERROR: malformed command\n");
 			}

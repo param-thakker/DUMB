@@ -14,21 +14,14 @@ typedef struct _message {
 
 typedef struct _box {
     char *name;
-    char *user;
+    int user;
+    int open;
     struct _box *next;
     message *messages;
 } box;
 
-void logMessage(int client, char* msg) {
-	time_t t = time(NULL);
-	struct sockaddr_in address;
-	socklen_t size = sizeof(struct sockaddr_in);
-	
-	getpeername(client, (struct sockaddr *) &address, &size);
-	
-	printf("%s %s %s\n", strtok(ctime(&t), "\n"), inet_ntoa(address.sin_addr), msg);
-}
-
+char *getIpAddress(int client);
+void logMessage(int client, char* msg);
 void substr(char* str, char* sub , int start, int len);
 void addMsgBox(box **first, box *data);
 void removeMsgBox(box **first, box *data);
@@ -118,12 +111,12 @@ int main(int argc, char **argv) {
 						if(strcmp(pointer->name, clientMessage) == 0) {
 							found = 1;
 							
-							if(pointer->user == NULL) {
-								first = pointer->next;
-								free(pointer);
-							} else {
+							if(pointer->open) {
 								msg = "ER:OPEND";
 								logMessage(clientSocket, msg);
+							} else {
+								first = pointer->next;
+								free(pointer);							
 							}
 														
 							break;
@@ -133,12 +126,12 @@ int main(int argc, char **argv) {
 					if (pointer->next != NULL && strcmp(pointer->next->name, clientMessage) == 0) {
 				 		found = 1;
 						
-						if(pointer->next->user == NULL) {				 	
-						 	free(pointer->next);
-						 	pointer->next = pointer->next->next;
-						} else {
+						if(pointer->next->open) {				 	
 							msg = "ER:OPEND";
 							logMessage(clientSocket, msg);
+						} else {
+						 	free(pointer->next);
+						 	pointer->next = pointer->next->next;
 						}
 				 		
 				 		break;
@@ -150,7 +143,65 @@ int main(int argc, char **argv) {
 					logMessage(clientSocket, msg);
 				}
 			} else if(strcmp(clientMessage, "OPNBX") == 0) {
-			} else if(strcmp(clientMessage, "CLSBX") == 0) {			
+				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+			
+				msg = "OK!";
+			
+				int found = 0;
+				box *toOpen = NULL;
+				box *pointer = NULL;
+				for (pointer = first; pointer != NULL; pointer = pointer->next) {
+					if(pointer->open && pointer->user == 1) {
+						found = 1;
+						toOpen = NULL;
+						msg = "ER:ONLY1";
+						logMessage(clientSocket, msg);						
+						break;
+					}
+				
+					if(strcmp(pointer->name, clientMessage) == 0) {
+ 						found = 1;
+ 						
+						if(pointer->open && pointer->user != 1) {
+							msg = "ER:OPEND";
+							logMessage(clientSocket, msg);							
+						} else if(!pointer->open) {
+							toOpen = pointer;
+						}
+					}
+				}
+				
+				if(toOpen != NULL) {
+					toOpen->open = 1;
+					toOpen->user = 1;				
+				}
+				
+				if(!found) {
+					msg = "ER:NEXST";
+					logMessage(clientSocket, msg);
+				}
+			} else if(strcmp(clientMessage, "CLSBX") == 0) {
+				substr(buffer, clientMessage, 6, strlen(buffer) - 6);
+			
+				msg = "OK!";
+			
+				int found = 0;
+				box *pointer = NULL;
+				for (pointer = first; pointer != NULL; pointer = pointer->next) {
+					if(strcmp(pointer->name, clientMessage) == 0) {
+ 						 found = 1;
+						 if(pointer->user == 1) {
+							 pointer->user = 0;
+						 } else {
+						 	msg = "ER:NOOPN";
+						 }
+					}
+				}
+				
+				if(!found) {
+					msg = "ER:NOOPN";
+					logMessage(clientSocket, msg);
+				}			
 			} else if(strcmp(clientMessage, "NXTMG") == 0) {
 			} else if(strcmp(clientMessage, "PUTMG") == 0) {
 			} else {
@@ -170,6 +221,20 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+char *getIpAddress(int client) {
+	struct sockaddr_in address;
+	socklen_t size = sizeof(struct sockaddr_in);
+	
+	getpeername(client, (struct sockaddr *) &address, &size);
+	
+	return inet_ntoa(address.sin_addr);
+}
+
+void logMessage(int client, char* msg) {
+	time_t t = time(NULL);
+	printf("%s %s %s\n", strtok(ctime(&t), "\n"), getIpAddress(client), msg);
+}
+
 void substr(char* str, char* sub , int start, int len){
     memcpy(sub, &str[start], len);
     sub[len] = '\0';
@@ -181,7 +246,8 @@ void addMsgBox(box **first, box *data) {
 	temp->name = (char *) malloc(strlen(data->name) + 1);
 	strcpy(temp->name, data->name);
 
-	temp->user = NULL;
+	temp->open = 0;
+	temp->user = 0;
 	
 	temp->next = *first;
 	*first = temp;
