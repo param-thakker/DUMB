@@ -6,27 +6,10 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include "DUMBserver.h"
 
-typedef struct _message {
-    char *msg;
-    struct _message *next;
-} message;
-
-typedef struct _box {
-    char *name;
-    int user;
-    int open;
-    struct _box *next;
-    message *messages;
-} box;
-
-char *getIpAddress(int client);
-void logMessage(int client, char* msg);
-void substr(char *str, char *sub, int start, int end);
-void addMsgBox(box **first, box *data);
-void removeMsgBox(box **first, box *data);
-void addMessage(box *b, message *Message);
-char *getMessage(box *b);
+box *first = NULL;
+pthread_mutex_t lock;
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
@@ -57,21 +40,37 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	
-	int clientSocket = accept(socketFD, (struct sockaddr *) &address, &size);
-	if(clientSocket == -1) {
-		perror("Accept failed");
-		return 1;
+	pthread_mutex_init(&lock, NULL);
+	
+	int *clientSocket = (int *) malloc(sizeof(int));
+	while(1) {
+		*clientSocket = accept(socketFD, (struct sockaddr *) &address, &size);
+		if(*clientSocket == -1) {
+			perror("Accept failed");
+			return 1;
+		}
+		
+		pthread_t id = 0;
+		pthread_create(&id, NULL, clientHandler, (void *) clientSocket);
 	}
 	
-	logMessage(clientSocket, "connected");
+	pthread_mutex_destroy(&lock);
+	
+	return 0;
+}
+
+void *clientHandler(void *clientSocket) {
+	int client = *((int *) clientSocket);
+	box *openBox = NULL;
+
+	logMessage(client, "connected");
 
 	char *buffer = (char *) malloc(1<<16);
 	char *clientMessage = (char *) malloc(1<<16);
-	box *first = NULL;
-	read(clientSocket, buffer, 1024);
+	read(client, buffer, 1024);
 
 	while (strcmp(buffer, "GDBYE") != 0){
-		logMessage(clientSocket, buffer);
+		logMessage(client, buffer);
 		
 		char *msg = (char *) malloc(32);
 		if (strcmp(buffer, "HELLO") == 0){
@@ -86,26 +85,32 @@ int main(int argc, char **argv) {
 				messageBox->name = clientMessage;
 				messageBox->messages = NULL;
 				
+				pthread_mutex_lock(&lock);
+				
 				box *pointer = NULL;
 				for (pointer = first; pointer != NULL; pointer = pointer->next){
 				 	if (strcmp(pointer->name, clientMessage) == 0) {
 				 		msg = "ER:EXIST";
-					 	logMessage(clientSocket, msg);
+					 	logMessage(client, msg);
 					 	error=1;
 						break;
 				 	}
-				}	
+				}
 		
 				if (error == 0) {
 			        addMsgBox(&first, messageBox);
        				msg = "OK!";
 				}
 				
+				pthread_mutex_unlock(&lock);
+				
 				free(messageBox);
 			} else if (strcmp(clientMessage, "DELBX") == 0) {
 				substr(buffer, clientMessage, 6, strlen(buffer));
 				
 				msg = "OK!";
+				
+				pthread_mutex_lock(&lock);
 				
 				int found = 0;
 				box *pointer = NULL;
@@ -116,10 +121,15 @@ int main(int argc, char **argv) {
 							
 							if(pointer->open) {
 								msg = "ER:OPEND";
-								logMessage(clientSocket, msg);
+								logMessage(client, msg);
 							} else {
 								first = pointer->next;
-								free(pointer);							
+								
+								// FOR MUTEX TESTING
+								memset(pointer, 0, sizeof(box));
+								// FOR MUTEX TESTING
+																
+								free(pointer);
 							}
 														
 							break;
@@ -131,7 +141,7 @@ int main(int argc, char **argv) {
 						
 						if(pointer->next->open) {				 	
 							msg = "ER:OPEND";
-							logMessage(clientSocket, msg);
+							logMessage(client, msg);
 						} else {
 						 	free(pointer->next);
 						 	pointer->next = pointer->next->next;
@@ -141,143 +151,113 @@ int main(int argc, char **argv) {
 				 	}
 				}
 				
+				pthread_mutex_unlock(&lock);
+				
 				if(!found) {
 					msg = "ER:NEXST";
-					logMessage(clientSocket, msg);
+					logMessage(client, msg);
 				}
 			} else if(strcmp(clientMessage, "OPNBX") == 0) {
 				substr(buffer, clientMessage, 6, strlen(buffer));
-			
-				msg = "OK!";
-			
-				int found = 0;
-				box *toOpen = NULL;
-				box *pointer = NULL;
-				for (pointer = first; pointer != NULL; pointer = pointer->next) {
-					if(pointer->open && pointer->user == 1) {
-						found = 1;
-						toOpen = NULL;
-						msg = "ER:ONLY1";
-						logMessage(clientSocket, msg);						
-						break;
-					}
 				
-					if(strcmp(pointer->name, clientMessage) == 0) {
- 						found = 1;
- 						
-						if(pointer->open && pointer->user != 1) {
-							msg = "ER:OPEND";
-							logMessage(clientSocket, msg);							
-						} else if(!pointer->open) {
-							toOpen = pointer;
+				msg = "OK!";
+				
+				if(openBox == NULL) {
+					pthread_mutex_lock(&lock);
+					
+					int found = 0;
+					box *toOpen = NULL;
+					box *pointer = NULL;
+					for (pointer = first; pointer != NULL; pointer = pointer->next) {					
+						if(strcmp(pointer->name, clientMessage) == 0) {
+	 						found = 1;
+	 						
+							if(pointer->open) {
+								msg = "ER:OPEND";
+								logMessage(client, msg);							
+							} else {
+								toOpen = pointer;
+							}
 						}
 					}
-				}
-				
-				if(toOpen != NULL) {
-					toOpen->open = 1;
-					toOpen->user = 1;				
-				}
-				
-				if(!found) {
-					msg = "ER:NEXST";
-					logMessage(clientSocket, msg);
+					
+					if(toOpen != NULL) {
+						toOpen->open = 1;
+						openBox = toOpen;
+					}
+					
+					pthread_mutex_unlock(&lock);
+					
+					if(!found) {
+						msg = "ER:NEXST";
+						logMessage(client, msg);
+					}
+				} else {
+					msg = "ER:ONLY1";
+					logMessage(client, msg);
 				}
 			} else if(strcmp(clientMessage, "CLSBX") == 0) {
 				substr(buffer, clientMessage, 6, strlen(buffer));
 			
 				msg = "OK!";
 			
-				int found = 0;
-				box *pointer = NULL;
-				for (pointer = first; pointer != NULL; pointer = pointer->next) {
-					if(strcmp(pointer->name, clientMessage) == 0) {
- 						found = 1;
- 						 
-						if(pointer->open && pointer->user == 1) {
-							pointer->open = 0;
-							pointer->user = 0;
-						} else {
-							msg = "ER:NOOPN";
-							logMessage(clientSocket, msg);							
-						}
-					}
-				}
-				
-				if(!found) {
+				if(openBox == NULL) {
 					msg = "ER:NOOPN";
-					logMessage(clientSocket, msg);
-				}			
+					logMessage(client, msg);
+				} else {
+					openBox->open = 0;
+					openBox = NULL;
+				}
 			} else if(strcmp(clientMessage, "NXTMG") == 0) {
-				box *b = NULL;
-				for(b = first; b != NULL; b = b->next) {
-					if(b->open && b->user == 1) {
-						break;
-					}
-				}
-				
-				if(b == NULL) {
+				if(openBox == NULL) {
 					msg = "ER:NOOPN";
-					logMessage(clientSocket, msg);
-				} else {				
-					char *m = getMessage(b);
+					logMessage(client, msg);
+				} else {
+					char *m = getMessage(openBox);
 					
 					if(m == NULL) {
 						msg = "ER:EMPTY";
-						logMessage(clientSocket, msg);
+						logMessage(client, msg);
 					} else {
 						sprintf(msg, "OK!%d!%s", strlen(m), m);
 					}
 				}
 			} else if(strcmp(clientMessage, "PUTMG") == 0) {
-				char *args = (char *) malloc(1<<16);
-				
-				int len;
-				char *m = (char *) malloc(1<<16);
-				
-				sscanf(buffer, "PUTMG!%d!%[^\n]s", &len, m);
-				
-				message *Message = (message *) malloc(sizeof(message));
-				Message->msg = m;
-				
-				box *b = NULL;
-				for(b = first; b != NULL; b = b->next) {
-					if(b->open && b->user == 1) {
-						break;
-					}
-				}
-				
-				sprintf(msg, "OK!%d", len);
-				
-				if(b == NULL) {
+				if(openBox == NULL) {
 					msg = "ER:NOOPN";
-					logMessage(clientSocket, msg);
-				} else {			
-					addMessage(b, Message);
+					logMessage(client, msg);
+				} else {
+					char *args = (char *) malloc(1<<16);
+					
+					int len;
+					char *m = (char *) malloc(1<<16);
+					
+					sscanf(buffer, "PUTMG!%d!%[^\n]s", &len, m);
+					
+					message *Message = (message *) malloc(sizeof(message));
+					Message->msg = m;
+					
+					sprintf(msg, "OK!%d", len);
+					addMessage(openBox, Message);
 				}
 			} else {
 				msg = "ER:WHAT?";
-				logMessage(clientSocket, msg);
+				logMessage(client, msg);
 			}
 		}
 		
-		write(clientSocket, msg, strlen(msg) + 1);
-		read(clientSocket, buffer, 1024);
+		write(client, msg, strlen(msg) + 1);
+		read(client, buffer, 1024);
 	}
 	
-	box *b;
-	for(b = first; b != NULL; b = b->next) {
-		if(b->open && b->user == 1) {
-			b->open = 0;
-			b->user = 0;
-		}
+	// close the currently open box
+	if(openBox != NULL) {
+		openBox->open = 0;
 	}
 	
-	logMessage(clientSocket, buffer);
-	logMessage(clientSocket, "disconnected");
-	close(clientSocket);
-	
-	return 0;
+	logMessage(client, buffer);
+	logMessage(client, "disconnected");
+	close(client);
 }
 
 char *getIpAddress(int client) {
@@ -306,7 +286,6 @@ void addMsgBox(box **first, box *data) {
 	strcpy(temp->name, data->name);
 
 	temp->open = 0;
-	temp->user = 0;
 	
 	temp->next = *first;
 	*first = temp;

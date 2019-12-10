@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
 	
 	if(inet_pton(AF_INET, argv[1], &address.sin_addr) < 1) {
 		printf("ERROR: Invalid IP address\n");
+		return 1;
 	}
 	
 	int i;
@@ -55,6 +56,7 @@ int main(int argc, char **argv) {
 		printf("Connected successfully.\n");
 	} else {
 		printf("There was a server-side error. Closing the connection\n");
+		return 1;
 	}
 	
 	printf("You can now start entering the commands\n");
