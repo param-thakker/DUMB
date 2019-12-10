@@ -4,7 +4,7 @@ client:
 	gcc DUMBclient.c -o DUMBclient
 
 serve:
-	gcc DUMBserver.c -o DUMBserve
+	gcc DUMBserver.c -o DUMBserve -lpthread
 	
 clean:
 	rm -f DUMBclient
