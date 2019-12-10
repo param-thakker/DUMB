@@ -5,7 +5,6 @@ typedef struct _message {
 
 typedef struct _box {
     char *name;
-//    int user;
     int open;
     struct _box *next;
     message *messages;

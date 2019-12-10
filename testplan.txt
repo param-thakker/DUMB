@@ -1,1 +1,12 @@
-ER:ONLY1
+In this assignment, we process the command input by the user in plain English and then transform it to the appropriate DUMB protocol command.
+To test that our code was synchronized and that the server does not cause client threads to deadlock, we added mutex locks to some critical sections of our code
+such as when create a message box, delete a message box or try to open a message box. We tested our code without mutexes
+first by adding sleep() to test how commands entered by the clients at same time affect the protocol and if we got the desired output.
+We found that the server crashes if we try to do multiple things at a time such as putting a message in a message box which is
+being deleted by another client at the same time and many other scenarios like that. By using sleep() function in our code, 
+we realized the critical sections of our code where we should use mutex_lock so that the server doesn't crash.
+
+While solving the assignment, we found a flaw in the DUMB protocol. We saw that there was no error reported to the client when a client 
+tries to open a message box which is already open by the same client. We therefore have added that functionality which will report 
+ER:ONLY1 to the client when that scenario occurs.
+

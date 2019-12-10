@@ -70,13 +70,14 @@ void *clientHandler(void *clientSocket) {
 	read(client, buffer, 1024);
 
 	while (strcmp(buffer, "GDBYE") != 0){
-		logMessage(client, buffer);
+		substr(buffer, clientMessage, 0, 5);
+		logMessage(client, clientMessage);
 		
 		char *msg = (char *) malloc(32);
 		if (strcmp(buffer, "HELLO") == 0){
 			msg = "HELLO DUMBv0 ready!";
 		} else {
-			substr(buffer, clientMessage, 0, 5);
+			//substr(buffer, clientMessage, 0, 5);
 			
 			if (strcmp(clientMessage, "CREAT") == 0){
 				int error=0;
@@ -123,10 +124,11 @@ void *clientHandler(void *clientSocket) {
 								msg = "ER:OPEND";
 								logMessage(client, msg);
 							} else {
+								//sleep
 								first = pointer->next;
 								
 								// FOR MUTEX TESTING
-								memset(pointer, 0, sizeof(box));
+								//memset
 								// FOR MUTEX TESTING
 																
 								free(pointer);
@@ -174,7 +176,7 @@ void *clientHandler(void *clientSocket) {
 	 						
 							if(pointer->open) {
 								msg = "ER:OPEND";
-								logMessage(client, msg);							
+						       logMessage(client, msg);							
 							} else {
 								toOpen = pointer;
 							}
@@ -238,6 +240,7 @@ void *clientHandler(void *clientSocket) {
 					Message->msg = m;
 					
 					sprintf(msg, "OK!%d", len);
+
 					addMessage(openBox, Message);
 				}
 			} else {
