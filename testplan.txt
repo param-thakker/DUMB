@@ -6,7 +6,15 @@ We found that the server crashes if we try to do multiple things at a time such 
 being deleted by another client at the same time and many other scenarios like that. By using sleep() function in our code, 
 we realized the critical sections of our code where we should use mutex_lock so that the server doesn't crash.
 
-While solving the assignment, we found a flaw in the DUMB protocol. We saw that there was no error reported to the client when a client 
-tries to open a message box which is already open by the same client. We therefore have added that functionality which will report 
-ER:ONLY1 to the client when that scenario occurs.
+For example, we removed the mutex lock around the critical section for the CREAT command,
+and had the thread sleep for 3 seconds immediately before adding the message box to the linked list.
+By then having two threads try to create the same message box in quick succession, they would both successfully
+insert the same message box into the linked list, because the sleep() ensures that the first thread will insert
+the new message box after the second thread has already ensured that it does not already exist, so the second thread
+will insert it as well. By adding in the locks, even with the sleep() still in, this issue does not occur. The first
+thread locks the critical section, inserts the message box, and then unlocks it again. The second thread then locks it
+and sees that it is already inserted.
 
+While solving the assignment, we found a flaw in the DUMB protocol. We saw that there was no error reported to the client when a client
+tries to open a message box which is already open by the same client, or when a client tries to open another message box while they already have one open.
+We therefore have added that functionality which will report ER:ONLY1 to the client when that scenario occurs.

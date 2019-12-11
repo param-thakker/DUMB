@@ -77,8 +77,6 @@ void *clientHandler(void *clientSocket) {
 		if (strcmp(buffer, "HELLO") == 0){
 			msg = "HELLO DUMBv0 ready!";
 		} else {
-			//substr(buffer, clientMessage, 0, 5);
-			
 			if (strcmp(clientMessage, "CREAT") == 0){
 				int error=0;
 				box* messageBox = (box *) malloc(sizeof(box));
@@ -93,13 +91,13 @@ void *clientHandler(void *clientSocket) {
 				 	if (strcmp(pointer->name, clientMessage) == 0) {
 				 		msg = "ER:EXIST";
 					 	logMessage(client, msg);
-					 	error=1;
+					 	error = 1;
 						break;
 				 	}
 				}
 		
 				if (error == 0) {
-			        addMsgBox(&first, messageBox);
+					addMsgBox(&first, messageBox);
        				msg = "OK!";
 				}
 				
@@ -123,17 +121,14 @@ void *clientHandler(void *clientSocket) {
 							if(pointer->open) {
 								msg = "ER:OPEND";
 								logMessage(client, msg);
+							} else if(pointer->messages == NULL) {
+								first = pointer->next;						
+								free(pointer);								
 							} else {
-								//sleep
-								first = pointer->next;
-								
-								// FOR MUTEX TESTING
-								//memset
-								// FOR MUTEX TESTING
-																
-								free(pointer);
+								msg = "ER:NOTMT";
+								logMessage(client, msg);
 							}
-														
+										
 							break;
 						}
 					}
@@ -203,7 +198,7 @@ void *clientHandler(void *clientSocket) {
 			
 				msg = "OK!";
 			
-				if(openBox == NULL) {
+				if(openBox == NULL || strcmp(openBox->name, clientMessage) != 0) {
 					msg = "ER:NOOPN";
 					logMessage(client, msg);
 				} else {
